@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.26)
-project(better_casts VERSION 0.1.1 LANGUAGES CXX)
+project(better_casts VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 14)
@@ -13,7 +13,7 @@ set(FLOAT_OPS
         Truncate
 )
 
-option(DEFAULT_FLOAT_CAST_OP "Default float cast operation" Truncate)
+option(DEFAULT_FLOAT_CAST_OP "Default float cast operation" "Truncate")
 option(WERROR "Treat all warnings as errors" OFF)
 
 if (NOT DEFAULT_FLOAT_CAST_OP IN_LIST FLOAT_OPS)

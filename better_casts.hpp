@@ -42,6 +42,7 @@
 #  elif defined(__GNUC__)
 #    define UNREACHABLE() __builtin_unreachable()
 #  else
+#    include <cassert>
 #    define UNREACHABLE() assert(0)
 #  endif
 #endif
@@ -77,14 +78,6 @@ enum class cast_type
     up_cast,
     void_cast,
 };
-
-struct cast_violation
-{
-    cast_type type;
-    std::string message;
-};
-
-using cast_violation_handler = void (*)(const cast_violation&);
 
 class cast_error : public std::runtime_error
 {
@@ -139,31 +132,6 @@ namespace detail
     template<typename T, typename U>
     INLINE_CONSTEXPR bool is_same_arithmetic = are_both_int<T, U> || are_both_float<T, U>;
 
-    NORETURN constexpr void default_violation_handler(const cast_violation& violation) noexcept(false)
-    {
-        switch (violation.type)
-        {
-            case cast_type::enum_cast:
-                throw enum_cast_error(violation.message);
-
-            case cast_type::float_cast:
-                throw float_cast_error(violation.message);
-
-            case cast_type::narrow_cast:
-                throw narrow_cast_error(violation.message);
-
-            case cast_type::sign_cast:
-                throw sign_cast_error(violation.message);
-
-            case cast_type::up_cast:
-            case cast_type::void_cast:
-            default:
-                UNREACHABLE();
-        }
-    }
-
-    cast_violation_handler active_violation_handler;
-
     namespace math
     {
         struct float_op_ceiling
@@ -211,7 +179,14 @@ namespace detail
             static_assert(std::is_floating_point<T>::value, "T must be floating point to check for Infinity");
 
             // NOLINTNEXTLINE(clang-diagnostic-float-equal)
+#ifdef __clang__
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wfloat-equal"
+#endif
             return val == std::numeric_limits<T>::infinity() || val == -std::numeric_limits<T>::infinity();
+#ifdef __clang__
+#  pragma clang diagnostic pop
+#endif
         }
 
         static_assert(is_inf(INFINITY), "is_inf(INFINITY) must be true");
@@ -222,14 +197,12 @@ namespace detail
         {
             if (is_nan(val))
             {
-                const cast_violation violation{ cast_type::float_cast, "float_cast failed: canno cast from NaN" };
-                active_violation_handler(violation);
+                throw float_cast_error("float_cast failed: cannot cast from NaN");
             }
 
             if (is_inf(val))
             {
-                const cast_violation violation{ cast_type::float_cast, "float_cast failed: canno cast from Infinity" };
-                active_violation_handler(violation);
+                throw float_cast_error("float_cast failed: cannot cast from Infinity");
             }
         }
 
@@ -271,16 +244,6 @@ namespace detail
     } //namespace math
 } // namespace detail
 
-inline void set_violation_handler(const cast_violation_handler handler = nullptr) noexcept
-{
-    detail::active_violation_handler = handler == nullptr ? detail::default_violation_handler : handler;
-}
-
-NODISCARD inline auto violation_handler() noexcept -> cast_violation_handler
-{
-    return detail::active_violation_handler;
-}
-
 template<typename T, typename U>
 struct is_enum_castable :
     std::integral_constant<bool,
@@ -309,16 +272,12 @@ NODISCARD constexpr auto enum_cast_checked(U u) noexcept(false) -> T
     // TODO: Can check for valid numerator?
     if (u > static_cast<U>((std::numeric_limits<T>::max)()))
     {
-        const cast_violation violation{ cast_type::enum_cast,
-            "enum_cast failed: input exceeded max value for output type" };
-        detail::active_violation_handler(violation);
+        throw enum_cast_error("enum_cast failed: input exceeded max value for output type");
     }
 
     if (u < static_cast<U>((std::numeric_limits<T>::min)()))
     {
-        const cast_violation violation{ cast_type::enum_cast,
-            "enum_cast failed: input exceeded min value for output type" };
-        detail::active_violation_handler(violation);
+        throw enum_cast_error("enum_cast failed: input exceeded min value for output type");
     }
 
     return static_cast<T>(u);
@@ -425,16 +384,12 @@ NODISCARD constexpr auto float_cast_checked(U&& u, const detail::math::float_op_
 
     if (u > 0.0 && u > static_cast<U>((std::numeric_limits<T>::max)()))
     {
-        const cast_violation violation{ cast_type::float_cast,
-            "float_cast (ceiling) failed: input exceeded max value for output type" };
-        detail::active_violation_handler(violation);
+        throw float_cast_error("float_cast (ceiling) failed: input exceeded max value for output type");
     }
 
     if (u < 0.0 && u + 1.0 <= static_cast<U>((std::numeric_limits<T>::min)()))
     {
-        const cast_violation violation{ cast_type::float_cast,
-            "float_cast (ceiling) failed: input exceeded min value for output type" };
-        detail::active_violation_handler(violation);
+        throw float_cast_error("float_cast (ceiling) failed: input exceeded min value for output type");
     }
 
     return float_cast_unchecked<T, U>(std::forward<U>(u), tag);
@@ -450,16 +405,12 @@ NODISCARD constexpr auto float_cast_checked(U&& u, const detail::math::float_op_
 
     if (u > 0.0 && u - 1.0 >= static_cast<U>((std::numeric_limits<T>::max)()))
     {
-        const cast_violation violation{ cast_type::float_cast,
-            "float_cast (floor) failed: input exceeded max value for output type" };
-        detail::active_violation_handler(violation);
+        throw float_cast_error("float_cast (floor) failed: input exceeded max value for output type");
     }
 
     if (u < 0.0 && u < static_cast<U>((std::numeric_limits<T>::min)()))
     {
-        const cast_violation violation{ cast_type::float_cast,
-            "float_cast (floor) failed: input exceeded min value for output type" };
-        detail::active_violation_handler(violation);
+        throw float_cast_error("float_cast (floor) failed: input exceeded min value for output type");
     }
 
     return float_cast_unchecked<T, U>(std::forward<U>(u), tag);
@@ -475,16 +426,12 @@ NODISCARD constexpr auto float_cast_checked(U&& u, const detail::math::float_op_
 
     if (u > 0.0 && u - 0.5 >= static_cast<U>((std::numeric_limits<T>::max)()))
     {
-        const cast_violation violation{ cast_type::float_cast,
-            "float_cast (round) failed: input exceeded max value for output type" };
-        detail::active_violation_handler(violation);
+        throw float_cast_error("float_cast (round) failed: input exceeded max value for output type");
     }
 
     if (u < 0.0 && u + 0.5 <= static_cast<U>((std::numeric_limits<T>::min)()))
     {
-        const cast_violation violation{ cast_type::float_cast,
-            "float_cast (round) failed: input exceeded min value for output type" };
-        detail::active_violation_handler(violation);
+        throw float_cast_error("float_cast (round) failed: input exceeded min value for output type");
     }
 
     return float_cast_unchecked<T, U>(std::forward<U>(u), tag);
@@ -500,16 +447,12 @@ NODISCARD constexpr auto float_cast_checked(U&& u, const detail::math::float_op_
 
     if (u - 1.0 >= static_cast<U>((std::numeric_limits<T>::max)()))
     {
-        const cast_violation violation{ cast_type::float_cast,
-            "float_cast (truncate) failed: input exceeded max value for output type" };
-        detail::active_violation_handler(violation);
+        throw float_cast_error("float_cast (truncate) failed: input exceeded max value for output type");
     }
 
     if (u + 1.0 <= static_cast<U>((std::numeric_limits<T>::min)()))
     {
-        const cast_violation violation{ cast_type::float_cast,
-            "float_cast (truncate) failed: input exceeded min value for output type" };
-        detail::active_violation_handler(violation);
+        throw float_cast_error("float_cast (truncate) failed: input exceeded min value for output type");
     }
 
     return float_cast_unchecked<T, U>(std::forward<U>(u), tag);
@@ -568,16 +511,12 @@ NODISCARD constexpr auto narrow_cast_checked(U u) noexcept(false) -> T
 
     if (u > static_cast<U>((std::numeric_limits<T>::max)()))
     {
-        const cast_violation violation{ cast_type::narrow_cast,
-            "narrow_cast failed: input exceeded max value for output type" };
-        detail::active_violation_handler(violation);
+        throw narrow_cast_error("narrow_cast failed: input exceeded max value for output type");
     }
 
     if (u < static_cast<U>((std::numeric_limits<T>::min)()))
     {
-        const cast_violation violation{ cast_type::narrow_cast,
-            "narrow_cast failed: input exceeded min value for output type" };
-        detail::active_violation_handler(violation);
+        throw narrow_cast_error("narrow_cast failed: input exceeded min value for output type");
     }
 
     return static_cast<T>(u);
@@ -590,9 +529,7 @@ NODISCARD constexpr auto narrow_cast_checked(U u) noexcept(false) -> T
 
     if (u > static_cast<U>((std::numeric_limits<T>::max)()))
     {
-        const cast_violation violation{ cast_type::narrow_cast,
-            "narrow_cast failed: input exceeded max value for output type" };
-        detail::active_violation_handler(violation);
+        throw narrow_cast_error("narrow_cast failed: input exceeded max value for output type");
     }
 
     return static_cast<T>(u);
@@ -649,9 +586,7 @@ NODISCARD constexpr auto sign_cast_checked(U u) noexcept(false) -> T
 
     if (u < 0)
     {
-        const cast_violation violation{ cast_type::sign_cast,
-            "sign_cast failed: cannot cast a negative number to unsigned" };
-        detail::active_violation_handler(violation);
+        throw sign_cast_error("sign_cast failed: cannot cast a negative number to unsigned");
     }
 
     return static_cast<T>(u);
@@ -664,9 +599,7 @@ NODISCARD constexpr auto sign_cast_checked(U u) noexcept(false) -> T
 
     if (u > static_cast<U>((std::numeric_limits<T>::max)()))
     {
-        const cast_violation violation{ cast_type::sign_cast,
-            "sign_cast failed: input exceeded max value for output type" };
-        detail::active_violation_handler(violation);
+        throw sign_cast_error("sign_cast failed: input exceeded max value for output type");
     }
 
     return static_cast<T>(u);
