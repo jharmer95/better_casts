@@ -232,6 +232,11 @@ namespace detail
             typename = std::enable_if_t<std::is_arithmetic<T>::value && std::is_floating_point<U>::value>>
         constexpr auto floor(U u) noexcept -> T
         {
+            if (static_cast<U>(static_cast<std::intmax_t>(u)) == u)
+            {
+                return static_cast<T>(u);
+            }
+
             return u < 0.0 ? static_cast<T>(u) - 1 : static_cast<T>(u);
         }
 
@@ -239,6 +244,11 @@ namespace detail
             typename = std::enable_if_t<std::is_arithmetic<T>::value && std::is_floating_point<U>::value>>
         constexpr auto ceiling(U u) noexcept -> T
         {
+            if (static_cast<U>(static_cast<std::intmax_t>(u)) == u)
+            {
+                return static_cast<T>(u);
+            }
+
             return u < 0.0 ? static_cast<T>(u) : static_cast<T>(u) + 1;
         }
     } //namespace math
@@ -249,7 +259,7 @@ struct is_enum_castable :
     std::integral_constant<bool,
         ((std::is_enum<T>::value || std::is_enum<U>::value)
             && (detail::is_same_size<T, U> || detail::is_larger_size<T, U>)
-            && detail::is_same_sign<std::underlying_type_t<T>, std::underlying_type_t<U>>)>
+            && detail::is_same_sign<T, std::underlying_type_t<U>>)>
 {
     // TODO: Can check if valid enumerator? (magic_enum)
 };
@@ -264,26 +274,7 @@ NODISCARD constexpr auto enum_cast_unchecked(U&& u) noexcept -> T
     return static_cast<T>(std::forward<U>(u));
 }
 
-template<typename T, typename U, std::enable_if_t<sizeof(T) < sizeof(U), bool> = true>
-NODISCARD constexpr auto enum_cast_checked(U u) noexcept(false) -> T
-{
-    static_assert(is_enum_castable_v<T, U>, "U does not meet the requirements to be casted to a T");
-
-    // TODO: Can check for valid numerator?
-    if (u > static_cast<U>((std::numeric_limits<T>::max)()))
-    {
-        throw enum_cast_error("enum_cast failed: input exceeded max value for output type");
-    }
-
-    if (u < static_cast<U>((std::numeric_limits<T>::min)()))
-    {
-        throw enum_cast_error("enum_cast failed: input exceeded min value for output type");
-    }
-
-    return static_cast<T>(u);
-}
-
-template<typename T, typename U, std::enable_if_t<sizeof(T) >= sizeof(U), bool> = true>
+template<typename T, typename U>
 NODISCARD constexpr auto enum_cast_checked(U u) noexcept -> T
 {
     static_assert(is_enum_castable_v<T, U>, "U does not meet the requirements to be casted to a T");

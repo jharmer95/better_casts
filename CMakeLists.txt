@@ -13,8 +13,9 @@ set(FLOAT_OPS
         Truncate
 )
 
-option(DEFAULT_FLOAT_CAST_OP "Default float cast operation" "Truncate")
+option(BUILD_TESTS "Builds the test tree" ON)
 option(WERROR "Treat all warnings as errors" OFF)
+set(DEFAULT_FLOAT_CAST_OP "Truncate" CACHE STRING "Default float cast operation")
 
 if (NOT DEFAULT_FLOAT_CAST_OP IN_LIST FLOAT_OPS)
     message(FATAL_ERROR "Invalid default float cast operation: ${DEFAULT_FLOAT_CAST_OP}. Must be one of: ${FLOAT_OPS}.")
@@ -156,6 +157,7 @@ elseif(CXX_CLANG OR CXX_CLANG_CL)
             -Wno-missing-braces
             -Wno-covered-switch-default
             -Wno-unused-template
+            -Wno-c++17-attribute-extensions
             -Wno-c++20-attribute-extensions
             -Wno-assume)
     set(MIN_WARNING -Wall)
@@ -173,8 +175,9 @@ elseif(CXX_CLANG OR CXX_CLANG_CL)
     endif()
 endif()
 
-add_library(better_casts INTERFACE better_casts.hpp)
+add_library(better_casts INTERFACE include/better_casts.hpp)
 target_compile_options(better_casts INTERFACE ${FULL_WARNING})
+target_include_directories(better_casts INTERFACE include)
 
 if (DEFAULT_FLOAT_CAST_OP STREQUAL "Ceiling")
     target_compile_definitions(better_casts INTERFACE DEFAULT_FLOAT_CAST_OP=1)
@@ -186,5 +189,4 @@ else ()
     target_compile_definitions(better_casts INTERFACE DEFAULT_FLOAT_CAST_OP=4)
 endif ()
 
-add_executable(tester tester.cpp)
-target_link_libraries(tester PRIVATE better_casts)
+add_subdirectory(tests)
