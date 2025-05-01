@@ -1,0 +1,96 @@
+---
+BasedOnStyle: Microsoft
+
+AccessModifierOffset: -4
+AlignAfterOpenBracket: DontAlign
+AlignConsecutiveAssignments: None
+AlignConsecutiveBitFields: Consecutive # 11
+AlignConsecutiveDeclarations: None
+AlignEscapedNewlines: Left
+AlignOperands: DontAlign
+AlignTrailingComments: true
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowBreakBeforeNoexceptSpecifier: Never # 18
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortCompoundRequirementOnASingleLine: true # 18
+AllowShortEnumsOnASingleLine: false # 11
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Inline # 9
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: Yes # 7
+BinPackArguments: true
+BinPackParameters: true
+BitFieldColonSpacing: After # 12
+BreakAfterAttributes: Leave # 16
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Allman
+BreakBeforeConceptDeclarations: true # 12
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeColon
+#BreakFunctionDefinitionParameters: false # 19
+BreakInheritanceList: AfterColon # 7
+BreakStringLiterals: true
+#BreakTemplateDeclarations: Yes # 19
+ColumnLimit: 120
+CompactNamespaces: false
+Cpp11BracedListStyle: false
+DerivePointerAlignment: false
+EmptyLineAfterAccessModifier: Never # 13
+EmptyLineBeforeAccessModifier: Always # 13
+FixNamespaceComments: true
+IncludeBlocks: Regroup # 7
+IndentCaseLabels: true
+IndentGotoLabels: false # 10
+IndentPPDirectives: AfterHash
+IndentRequiresClause: true # 15
+IndentWidth: 4
+IndentWrappedFunctionNames: false
+InsertBraces: true # 15
+InsertNewlineAtEOF: true # 16
+IntegerLiteralSeparator: # 16
+  Binary: 4
+  Decimal: 3
+  Hex: 4
+KeepEmptyLinesAtTheStartOfBlocks: false
+Language: Cpp
+MainIncludeChar: Quote # 19
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: Inner
+PackConstructorInitializers: NextLine # 14
+PointerAlignment: Left
+PPIndentWidth: 2 # 13
+QualifierAlignment: Custom # 14
+QualifierOrder: [ "inline", "static", "constexpr", "const", "volatile", "type" ] # 14
+ReflowComments: false
+RemoveBracesLLVM: false # 14
+RequiresClausePosition: OwnLine # 15
+RequiresExpressionIndentation: OuterScope # 16
+SeparateDefinitionBlocks: Leave # 14
+SortIncludes: Never
+SortUsingDeclarations: true
+SpaceAfterCStyleCast: false
+SpaceAfterTemplateKeyword: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCtorInitializerColon: true # 7
+SpaceBeforeInheritanceColon: true # 7
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true # 7
+SpaceInEmptyBlock: false # 10
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: Never
+SpacesInCStyleCastParentheses: false
+SpacesInConditionalStatement: false # 10
+SpacesInLineCommentPrefix: # 13
+  Minimum: 0
+  Maximum: 1
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+Standard: Latest
+TabWidth: 4
+UseCRLF: false # 10
+UseTab: Never

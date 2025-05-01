@@ -1,0 +1,17 @@
+---
+Checks: bugprone-*,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  google-*,
+  hicpp-*,
+  misc-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  security-*,
+  -*-uppercase-literal-suffix,
+WarningsAsErrors: ''
+HeaderFilterRegex: ''
+User: ''
+...
