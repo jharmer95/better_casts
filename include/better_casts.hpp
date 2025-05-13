@@ -89,25 +89,25 @@ public:
     using runtime_error::runtime_error;
 };
 
-class enum_cast_error : public cast_error
+class enum_cast_error final : public cast_error
 {
 public:
     using cast_error::cast_error;
 };
 
-class float_cast_error : public cast_error
+class float_cast_error final : public cast_error
 {
 public:
     using cast_error::cast_error;
 };
 
-class narrow_cast_error : public cast_error
+class narrow_cast_error final : public cast_error
 {
 public:
     using cast_error::cast_error;
 };
 
-class sign_cast_error : public cast_error
+class sign_cast_error final : public cast_error
 {
 public:
     using cast_error::cast_error;
@@ -248,24 +248,25 @@ namespace detail
             return t < 0 ? -t : t;
         }
 
-        template<typename T, typename U,
-            typename = std::enable_if_t<std::is_arithmetic<T>::value && std::is_floating_point<U>::value>>
-        constexpr auto round(U u) noexcept -> T
+        template<typename To, typename From,
+            typename = std::enable_if_t<std::is_arithmetic<To>::value && std::is_floating_point<From>::value>>
+        constexpr auto round(From u) noexcept -> To
         {
-            if (u >= float_const<U>::ZERO)
+            if (u >= float_const<From>::ZERO)
             {
-                return abs(trunc(u) - u) >= abs(trunc(u) - u + float_const<U>::ONE)
-                    ? static_cast<T>(u) + static_cast<T>(1)
-                    : static_cast<T>(u);
+                return abs(trunc(u) - u) >= abs(trunc(u) - u + float_const<From>::ONE)
+                    ? static_cast<To>(u) + static_cast<To>(1)
+                    : static_cast<To>(u);
             }
 
-            return abs(trunc(u) - u) >= abs(trunc(u) - u - float_const<U>::ONE) ? static_cast<T>(u) - static_cast<T>(1)
-                                                                                : static_cast<T>(u);
+            return abs(trunc(u) - u) >= abs(trunc(u) - u - float_const<From>::ONE)
+                ? static_cast<To>(u) - static_cast<To>(1)
+                : static_cast<To>(u);
         }
 
-        template<typename T, typename U,
-            typename = std::enable_if_t<std::is_arithmetic<T>::value && std::is_floating_point<U>::value>>
-        constexpr auto floor(U u) noexcept -> T
+        template<typename To, typename From,
+            typename = std::enable_if_t<std::is_arithmetic<To>::value && std::is_floating_point<From>::value>>
+        constexpr auto floor(From u) noexcept -> To
         {
 #ifdef __clang__
 #  pragma clang diagnostic push
@@ -273,18 +274,18 @@ namespace detail
 #endif
             if (trunc(u) == u)
             {
-                return static_cast<T>(u);
+                return static_cast<To>(u);
             }
 #ifdef __clang__
 #  pragma clang diagnostic pop
 #endif
 
-            return u < float_const<U>::ZERO ? static_cast<T>(u) - static_cast<T>(1) : static_cast<T>(u);
+            return u < float_const<From>::ZERO ? static_cast<To>(u) - static_cast<To>(1) : static_cast<To>(u);
         }
 
-        template<typename T, typename U,
-            typename = std::enable_if_t<std::is_arithmetic<T>::value && std::is_floating_point<U>::value>>
-        constexpr auto ceiling(U u) noexcept -> T
+        template<typename To, typename From,
+            typename = std::enable_if_t<std::is_arithmetic<To>::value && std::is_floating_point<From>::value>>
+        constexpr auto ceiling(From u) noexcept -> To
         {
 #ifdef __clang__
 #  pragma clang diagnostic push
@@ -292,45 +293,45 @@ namespace detail
 #endif
             if (trunc(u) == u)
             {
-                return static_cast<T>(u);
+                return static_cast<To>(u);
             }
 #ifdef __clang__
 #  pragma clang diagnostic pop
 #endif
 
-            return u < float_const<U>::ZERO ? static_cast<T>(u) : static_cast<T>(u) + static_cast<T>(1);
+            return u < float_const<From>::ZERO ? static_cast<To>(u) : static_cast<To>(u) + static_cast<To>(1);
         }
     } //namespace math
 } // namespace detail
 
-template<typename T, typename U>
+template<typename To, typename From>
 struct is_enum_castable :
     std::integral_constant<bool,
-        ((std::is_enum<T>::value != std::is_enum<U>::value)
-            && (detail::is_same_size<T, U> || detail::is_larger_size<T, U>)
-            && detail::is_same_sign<detail::underlying_type_t<T>, detail::underlying_type_t<U>>)>
+        ((std::is_enum<To>::value != std::is_enum<From>::value)
+            && (detail::is_same_size<To, From> || detail::is_larger_size<To, From>)
+            && detail::is_same_sign<detail::underlying_type_t<To>, detail::underlying_type_t<From>>)>
 {
 };
 
-template<typename T, typename U>
-INLINE_CONSTEXPR bool is_enum_castable_v = is_enum_castable<T, U>::value;
+template<typename To, typename From>
+INLINE_CONSTEXPR bool is_enum_castable_v = is_enum_castable<To, From>::value;
 
-template<typename T, typename U>
-NODISCARD constexpr auto enum_cast_unchecked(U&& u) noexcept -> T
+template<typename To, typename From>
+NODISCARD constexpr auto enum_cast_unchecked(From&& u) noexcept -> To
 {
-    static_assert(is_enum_castable_v<T, U>, "U does not meet the requirements to be casted to a T");
-    return static_cast<T>(std::forward<U>(u));
+    static_assert(is_enum_castable_v<To, From>, "U does not meet the requirements to be casted to a T");
+    return static_cast<To>(std::forward<From>(u));
 }
 
-template<typename T, typename U>
-NODISCARD constexpr auto enum_cast_checked(U u) -> T
+template<typename To, typename From>
+NODISCARD constexpr auto enum_cast_checked(From u) -> To
 {
-    static_assert(is_enum_castable_v<T, U>, "U does not meet the requirements to be casted to a T");
+    static_assert(is_enum_castable_v<To, From>, "U does not meet the requirements to be casted to a T");
 
 #ifdef USE_MAGIC_ENUM
-    if constexpr (std::is_enum_v<T>)
+    if constexpr (std::is_enum_v<To>)
     {
-        auto casted = magic_enum::enum_cast<T>(u);
+        auto casted = magic_enum::enum_cast<To>(u);
 
         if (!casted.has_value())
         {
@@ -341,45 +342,45 @@ NODISCARD constexpr auto enum_cast_checked(U u) -> T
     }
     else
     {
-        if (!magic_enum::enum_contains<U>(u))
+        if (!magic_enum::enum_contains<From>(u))
         {
             throw enum_cast_error("enum_cast failed: value not contained within enum");
         }
 
-        return static_cast<T>(u);
+        return static_cast<To>(u);
     }
 #else
-    return static_cast<T>(u);
+    return static_cast<To>(u);
 #endif
 }
 
-template<typename T, typename U>
-NODISCARD constexpr auto enum_cast(U&& u) noexcept(sizeof(T) >= sizeof(U)) -> std::enable_if_t<CHECK_CASTS, T>
+template<typename To, typename From>
+NODISCARD constexpr auto enum_cast(From&& u) noexcept(sizeof(To) >= sizeof(From)) -> std::enable_if_t<CHECK_CASTS, To>
 {
-    static_assert(is_enum_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_enum_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
-    return enum_cast_checked<T>(std::forward<U>(u));
+    return enum_cast_checked<To>(std::forward<From>(u));
 }
 
-template<typename T, typename U>
-NODISCARD constexpr auto enum_cast(U&& u) noexcept -> std::enable_if_t<!CHECK_CASTS, T>
+template<typename To, typename From>
+NODISCARD constexpr auto enum_cast(From&& u) noexcept -> std::enable_if_t<!CHECK_CASTS, To>
 {
-    static_assert(is_enum_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_enum_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
-    return enum_cast_unchecked<T>(std::forward<U>(u));
+    return enum_cast_unchecked<To>(std::forward<From>(u));
 }
 
-template<typename T, typename U>
+template<typename To, typename From>
 struct is_float_castable :
     std::integral_constant<bool,
-        (std::is_integral<T>::value && !std::is_same<T, bool>::value && std::is_floating_point<U>::value)>
+        (std::is_integral<To>::value && !std::is_same<To, bool>::value && std::is_floating_point<From>::value)>
 {
 };
 
-template<typename T, typename U>
-INLINE_CONSTEXPR bool is_float_castable_v = is_float_castable<T, U>::value;
+template<typename To, typename From>
+INLINE_CONSTEXPR bool is_float_castable_v = is_float_castable<To, From>::value;
 
 namespace float_cast_op
 {
@@ -389,354 +390,360 @@ namespace float_cast_op
     INLINE_CONSTEXPR detail::math::float_op_truncate truncate{};
 } //namespace float_cast_op
 
-template<typename T, typename U>
-NODISCARD constexpr auto float_cast_unchecked(U&& u, MAYBE_UNUSED const detail::math::float_op_ceiling tag) noexcept
-    -> T
+template<typename To, typename From>
+NODISCARD constexpr auto float_cast_unchecked(From&& u, MAYBE_UNUSED const detail::math::float_op_ceiling tag) noexcept
+    -> To
 {
     (void)tag;
-    static_assert(is_float_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_float_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
-    return detail::math::ceiling<T>(std::forward<U>(u));
+    return detail::math::ceiling<To>(std::forward<From>(u));
 }
 
-template<typename T, typename U>
-NODISCARD constexpr auto float_cast_unchecked(U&& u, MAYBE_UNUSED const detail::math::float_op_floor tag) noexcept -> T
+template<typename To, typename From>
+NODISCARD constexpr auto float_cast_unchecked(From&& u, MAYBE_UNUSED const detail::math::float_op_floor tag) noexcept
+    -> To
 {
     (void)tag;
-    static_assert(is_float_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_float_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
-    return detail::math::floor<T>(std::forward<U>(u));
+    return detail::math::floor<To>(std::forward<From>(u));
 }
 
-template<typename T, typename U>
-NODISCARD constexpr auto float_cast_unchecked(U&& u, MAYBE_UNUSED const detail::math::float_op_round tag) noexcept -> T
+template<typename To, typename From>
+NODISCARD constexpr auto float_cast_unchecked(From&& u, MAYBE_UNUSED const detail::math::float_op_round tag) noexcept
+    -> To
 {
     (void)tag;
-    static_assert(is_float_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_float_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
-    return detail::math::round<T>(std::forward<U>(u));
+    return detail::math::round<To>(std::forward<From>(u));
 }
 
-template<typename T, typename U>
-NODISCARD constexpr auto float_cast_unchecked(U&& u, MAYBE_UNUSED const detail::math::float_op_truncate tag) noexcept
-    -> T
+template<typename To, typename From>
+NODISCARD constexpr auto float_cast_unchecked(From&& u, MAYBE_UNUSED const detail::math::float_op_truncate tag) noexcept
+    -> To
 {
     (void)tag;
-    static_assert(is_float_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_float_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
-    return static_cast<T>(std::forward<U>(u));
+    return static_cast<To>(std::forward<From>(u));
 }
 
-template<typename T, typename U>
-NODISCARD constexpr auto float_cast_unchecked(U&& u) noexcept -> T
+template<typename To, typename From>
+NODISCARD constexpr auto float_cast_unchecked(From&& u) noexcept -> To
 {
-    return float_cast_unchecked<T, U>(std::forward<U>(u), detail::math::float_op_default{});
+    return float_cast_unchecked<To, From>(std::forward<From>(u), detail::math::float_op_default{});
 }
 
-template<typename T, typename U>
-NODISCARD constexpr auto float_cast_checked(U&& u, const detail::math::float_op_ceiling tag) -> T
+template<typename To, typename From>
+NODISCARD constexpr auto float_cast_checked(From&& u, const detail::math::float_op_ceiling tag) -> To
 {
-    static_assert(is_float_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_float_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
     detail::math::check_inf_nan(u);
 
-    if (u > detail::math::float_const<U>::ZERO && u > static_cast<U>((std::numeric_limits<T>::max)()))
+    if (u > detail::math::float_const<From>::ZERO && u > static_cast<From>((std::numeric_limits<To>::max)()))
     {
         throw float_cast_error("float_cast (ceiling) failed: input exceeded max value for output type");
     }
 
-    if (u < detail::math::float_const<U>::ZERO
-        && u + detail::math::float_const<U>::ONE <= static_cast<U>((std::numeric_limits<T>::min)()))
+    if (u < detail::math::float_const<From>::ZERO
+        && u + detail::math::float_const<From>::ONE <= static_cast<From>((std::numeric_limits<To>::min)()))
     {
         throw float_cast_error("float_cast (ceiling) failed: input exceeded min value for output type");
     }
 
-    return float_cast_unchecked<T, U>(std::forward<U>(u), tag);
+    return float_cast_unchecked<To, From>(std::forward<From>(u), tag);
 }
 
-template<typename T, typename U>
-NODISCARD constexpr auto float_cast_checked(U&& u, const detail::math::float_op_floor tag) -> T
+template<typename To, typename From>
+NODISCARD constexpr auto float_cast_checked(From&& u, const detail::math::float_op_floor tag) -> To
 {
-    static_assert(is_float_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_float_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
     detail::math::check_inf_nan(u);
 
-    if (u > detail::math::float_const<U>::ZERO
-        && u - detail::math::float_const<U>::ONE >= static_cast<U>((std::numeric_limits<T>::max)()))
+    if (u > detail::math::float_const<From>::ZERO
+        && u - detail::math::float_const<From>::ONE >= static_cast<From>((std::numeric_limits<To>::max)()))
     {
         throw float_cast_error("float_cast (floor) failed: input exceeded max value for output type");
     }
 
-    if (u < detail::math::float_const<U>::ZERO && u < static_cast<U>((std::numeric_limits<T>::min)()))
+    if (u < detail::math::float_const<From>::ZERO && u < static_cast<From>((std::numeric_limits<To>::min)()))
     {
         throw float_cast_error("float_cast (floor) failed: input exceeded min value for output type");
     }
 
-    return float_cast_unchecked<T, U>(std::forward<U>(u), tag);
+    return float_cast_unchecked<To, From>(std::forward<From>(u), tag);
 }
 
-template<typename T, typename U>
-NODISCARD constexpr auto float_cast_checked(U&& u, const detail::math::float_op_round tag) -> T
+template<typename To, typename From>
+NODISCARD constexpr auto float_cast_checked(From&& u, const detail::math::float_op_round tag) -> To
 {
-    static_assert(is_float_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_float_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
     detail::math::check_inf_nan(u);
 
-    if (u > detail::math::float_const<U>::ZERO
-        && u - detail::math::float_const<U>::HALF >= static_cast<U>((std::numeric_limits<T>::max)()))
+    if (u > detail::math::float_const<From>::ZERO
+        && u - detail::math::float_const<From>::HALF >= static_cast<From>((std::numeric_limits<To>::max)()))
     {
         throw float_cast_error("float_cast (round) failed: input exceeded max value for output type");
     }
 
-    if (u < detail::math::float_const<U>::ZERO
-        && u + detail::math::float_const<U>::HALF <= static_cast<U>((std::numeric_limits<T>::min)()))
+    if (u < detail::math::float_const<From>::ZERO
+        && u + detail::math::float_const<From>::HALF <= static_cast<From>((std::numeric_limits<To>::min)()))
     {
         throw float_cast_error("float_cast (round) failed: input exceeded min value for output type");
     }
 
-    return float_cast_unchecked<T, U>(std::forward<U>(u), tag);
+    return float_cast_unchecked<To, From>(std::forward<From>(u), tag);
 }
 
-template<typename T, typename U>
-NODISCARD constexpr auto float_cast_checked(U&& u, const detail::math::float_op_truncate tag) -> T
+template<typename To, typename From>
+NODISCARD constexpr auto float_cast_checked(From&& u, const detail::math::float_op_truncate tag) -> To
 {
-    using u_no_cvref_t = std::remove_cv_t<std::remove_reference_t<U>>;
+    using val_t = std::remove_cv_t<std::remove_reference_t<From>>;
 
-    static_assert(is_float_castable_v<T, u_no_cvref_t>, "U does not meet the requirements to be casted to a T");
+    static_assert(is_float_castable_v<To, val_t>, "U does not meet the requirements to be casted to a T");
 
     detail::math::check_inf_nan(u);
 
-    if (u - detail::math::float_const<U>::ONE >= static_cast<u_no_cvref_t>((std::numeric_limits<T>::max)()))
+    if (u - detail::math::float_const<From>::ONE >= static_cast<val_t>((std::numeric_limits<To>::max)()))
     {
         throw float_cast_error("float_cast (truncate) failed: input exceeded max value for output type");
     }
 
-    if (u + detail::math::float_const<U>::ONE <= static_cast<u_no_cvref_t>((std::numeric_limits<T>::min)()))
+    if (u + detail::math::float_const<From>::ONE <= static_cast<val_t>((std::numeric_limits<To>::min)()))
     {
         throw float_cast_error("float_cast (truncate) failed: input exceeded min value for output type");
     }
 
-    return float_cast_unchecked<T, U>(std::forward<U>(u), tag);
+    return float_cast_unchecked<To, From>(std::forward<From>(u), tag);
 }
 
-template<typename T, typename U>
-NODISCARD constexpr auto float_cast_checked(U&& u) -> T
+template<typename To, typename From>
+NODISCARD constexpr auto float_cast_checked(From&& u) -> To
 {
-    return float_cast_checked<T, U>(std::forward<U>(u), detail::math::float_op_default{});
+    return float_cast_checked<To, From>(std::forward<From>(u), detail::math::float_op_default{});
 }
 
-template<typename T, typename U, typename Op = detail::math::float_op_default>
-NODISCARD constexpr auto float_cast(U&& u, Op op = Op{}) noexcept -> std::enable_if_t<CHECK_CASTS, T>
+template<typename To, typename From, typename Op = detail::math::float_op_default>
+NODISCARD constexpr auto float_cast(From&& u, Op op = Op{}) noexcept -> std::enable_if_t<CHECK_CASTS, To>
 {
-    static_assert(is_float_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_float_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
-    return float_cast_checked<T>(std::forward<U>(u), op);
+    return float_cast_checked<To>(std::forward<From>(u), op);
 }
 
-template<typename T, typename U, typename Op = detail::math::float_op_default>
-NODISCARD constexpr auto float_cast(U&& u, Op op = Op{}) noexcept -> std::enable_if_t<!CHECK_CASTS, T>
+template<typename To, typename From, typename Op = detail::math::float_op_default>
+NODISCARD constexpr auto float_cast(From&& u, Op op = Op{}) noexcept -> std::enable_if_t<!CHECK_CASTS, To>
 {
-    static_assert(is_float_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_float_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
-    return float_cast_unchecked<T>(std::forward<U>(u), op);
+    return float_cast_unchecked<To>(std::forward<From>(u), op);
 }
 
-template<typename T, typename U>
+template<typename To, typename From>
 struct is_narrow_castable :
     std::integral_constant<bool,
-        ((detail::is_smaller_size<T, U> || detail::is_same_size<T, U>)
-            && detail::is_same_sign<T, U> && std::is_arithmetic<T>::value && std::is_arithmetic<U>::value
-            && !std::is_same<T, bool>::value && !std::is_same<U, bool>::value
-            && detail::is_same_arithmetic<T, U> && !std::is_enum<T>::value && !std::is_enum<U>::value)>
+        ((detail::is_smaller_size<To, From> || detail::is_same_size<To, From>)
+            && detail::is_same_sign<To, From> && std::is_arithmetic<To>::value && std::is_arithmetic<From>::value
+            && !std::is_same<To, bool>::value && !std::is_same<From, bool>::value
+            && detail::is_same_arithmetic<To, From> && !std::is_enum<To>::value && !std::is_enum<From>::value)>
 {
 };
 
-template<typename T, typename U>
-INLINE_CONSTEXPR bool is_narrow_castable_v = is_narrow_castable<T, U>::value;
+template<typename To, typename From>
+INLINE_CONSTEXPR bool is_narrow_castable_v = is_narrow_castable<To, From>::value;
 
-template<typename T, typename U>
-NODISCARD constexpr auto narrow_cast_unchecked(U&& u) noexcept -> T
+template<typename To, typename From>
+NODISCARD constexpr auto narrow_cast_unchecked(From&& u) noexcept -> To
 {
-    static_assert(is_narrow_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_narrow_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
-    return static_cast<T>(std::forward<U>(u));
+    return static_cast<To>(std::forward<From>(u));
 }
 
-template<typename T, typename U, std::enable_if_t<(sizeof(T) < sizeof(U) && std::is_signed<T>::value), bool> = true>
-NODISCARD constexpr auto narrow_cast_checked(U u) noexcept(false) -> T
+template<typename To, typename From,
+    std::enable_if_t<(sizeof(To) < sizeof(From) && std::is_signed<To>::value), bool> = true>
+NODISCARD constexpr auto narrow_cast_checked(From u) noexcept(false) -> To
 {
-    static_assert(is_narrow_castable_v<T, U>, "U does not meet the requirements to be casted to a T");
+    static_assert(is_narrow_castable_v<To, From>, "U does not meet the requirements to be casted to a T");
 
-    if (u > static_cast<U>((std::numeric_limits<T>::max)()))
+    if (u > static_cast<From>((std::numeric_limits<To>::max)()))
     {
         throw narrow_cast_error("narrow_cast failed: input exceeded max value for output type");
     }
 
-    if (u < static_cast<U>((std::numeric_limits<T>::min)()))
+    if (u < static_cast<From>((std::numeric_limits<To>::min)()))
     {
         throw narrow_cast_error("narrow_cast failed: input exceeded min value for output type");
     }
 
-    return static_cast<T>(u);
+    return static_cast<To>(u);
 }
 
-template<typename T, typename U, std::enable_if_t<(sizeof(T) < sizeof(U) && std::is_unsigned<T>::value), bool> = true>
-NODISCARD constexpr auto narrow_cast_checked(U u) noexcept(false) -> T
+template<typename To, typename From,
+    std::enable_if_t<(sizeof(To) < sizeof(From) && std::is_unsigned<To>::value), bool> = true>
+NODISCARD constexpr auto narrow_cast_checked(From u) noexcept(false) -> To
 {
-    static_assert(is_narrow_castable_v<T, U>, "U does not meet the requirements to be casted to a T");
+    static_assert(is_narrow_castable_v<To, From>, "U does not meet the requirements to be casted to a T");
 
-    if (u > static_cast<U>((std::numeric_limits<T>::max)()))
+    if (u > static_cast<From>((std::numeric_limits<To>::max)()))
     {
         throw narrow_cast_error("narrow_cast failed: input exceeded max value for output type");
     }
 
-    return static_cast<T>(u);
+    return static_cast<To>(u);
 }
 
-template<typename T, typename U, std::enable_if_t<sizeof(T) == sizeof(U), bool> = true>
-NODISCARD constexpr auto narrow_cast_checked(U u) noexcept -> T
+template<typename To, typename From, std::enable_if_t<sizeof(To) == sizeof(From), bool> = true>
+NODISCARD constexpr auto narrow_cast_checked(From u) noexcept -> To
 {
-    static_assert(is_narrow_castable_v<T, U>, "U does not meet the requirements to be casted to a T");
+    static_assert(is_narrow_castable_v<To, From>, "U does not meet the requirements to be casted to a T");
 
-    return static_cast<T>(u);
+    return static_cast<To>(u);
 }
 
-template<typename T, typename U>
-NODISCARD constexpr auto narrow_cast(U&& u) noexcept(sizeof(T) == sizeof(U)) -> std::enable_if_t<CHECK_CASTS, T>
+template<typename To, typename From>
+NODISCARD constexpr auto narrow_cast(From&& u) noexcept(sizeof(To) == sizeof(From)) -> std::enable_if_t<CHECK_CASTS, To>
 {
-    static_assert(is_narrow_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_narrow_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
-    return narrow_cast_checked<T>(std::forward<U>(u));
+    return narrow_cast_checked<To>(std::forward<From>(u));
 }
 
-template<typename T, typename U>
-NODISCARD constexpr auto narrow_cast(U&& u) noexcept -> std::enable_if_t<!CHECK_CASTS, T>
+template<typename To, typename From>
+NODISCARD constexpr auto narrow_cast(From&& u) noexcept -> std::enable_if_t<!CHECK_CASTS, To>
 {
-    static_assert(is_narrow_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_narrow_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
-    return narrow_cast_unchecked<T>(std::forward<U>(u));
+    return narrow_cast_unchecked<To>(std::forward<From>(u));
 }
 
-template<typename T, typename U>
+template<typename To, typename From>
 struct is_sign_castable :
     std::integral_constant<bool,
-        (std::is_integral<T>::value && std::is_integral<U>::value
-            && (detail::is_same_size<T, U> || detail::is_larger_size<T, U>) && !detail::is_same_sign<T, U>)>
+        (std::is_integral<To>::value && std::is_integral<From>::value
+            && (detail::is_same_size<To, From> || detail::is_larger_size<To, From>) && !detail::is_same_sign<To, From>)>
 {
 };
 
-template<typename T, typename U>
-INLINE_CONSTEXPR bool is_sign_castable_v = is_sign_castable<T, U>::value;
+template<typename To, typename From>
+INLINE_CONSTEXPR bool is_sign_castable_v = is_sign_castable<To, From>::value;
 
-template<typename T, typename U>
-NODISCARD constexpr auto sign_cast_unchecked(U&& u) noexcept -> T
+template<typename To, typename From>
+NODISCARD constexpr auto sign_cast_unchecked(From&& u) noexcept -> To
 {
-    static_assert(is_sign_castable_v<T, U>, "U does not meet the requirements to be casted to a T");
-    return static_cast<T>(std::forward<U>(u));
+    static_assert(is_sign_castable_v<To, From>, "U does not meet the requirements to be casted to a T");
+    return static_cast<To>(std::forward<From>(u));
 }
 
-template<typename T, typename U, std::enable_if_t<std::is_unsigned<T>::value, bool> = true>
-NODISCARD constexpr auto sign_cast_checked(U u) noexcept(false) -> T
+template<typename To, typename From, std::enable_if_t<std::is_unsigned<To>::value, bool> = true>
+NODISCARD constexpr auto sign_cast_checked(From u) noexcept(false) -> To
 {
-    static_assert(is_sign_castable_v<T, U>, "U does not meet the requirements to be casted to a T");
+    static_assert(is_sign_castable_v<To, From>, "U does not meet the requirements to be casted to a T");
 
     if (u < 0)
     {
         throw sign_cast_error("sign_cast failed: cannot cast a negative number to unsigned");
     }
 
-    return static_cast<T>(u);
+    return static_cast<To>(u);
 }
 
-template<typename T, typename U, std::enable_if_t<(std::is_signed<T>::value && sizeof(T) == sizeof(U)), bool> = true>
-NODISCARD constexpr auto sign_cast_checked(U u) noexcept(false) -> T
+template<typename To, typename From,
+    std::enable_if_t<(std::is_signed<To>::value && sizeof(To) == sizeof(From)), bool> = true>
+NODISCARD constexpr auto sign_cast_checked(From u) noexcept(false) -> To
 {
-    static_assert(is_sign_castable_v<T, U>, "U does not meet the requirements to be casted to a T");
+    static_assert(is_sign_castable_v<To, From>, "U does not meet the requirements to be casted to a T");
 
-    if (u > static_cast<U>((std::numeric_limits<T>::max)()))
+    if (u > static_cast<From>((std::numeric_limits<To>::max)()))
     {
         throw sign_cast_error("sign_cast failed: input exceeded max value for output type");
     }
 
-    return static_cast<T>(u);
+    return static_cast<To>(u);
 }
 
-template<typename T, typename U, std::enable_if_t<(std::is_signed<T>::value && sizeof(T) > sizeof(U)), bool> = true>
-NODISCARD constexpr auto sign_cast_checked(U u) noexcept -> T
+template<typename To, typename From,
+    std::enable_if_t<(std::is_signed<To>::value && sizeof(To) > sizeof(From)), bool> = true>
+NODISCARD constexpr auto sign_cast_checked(From u) noexcept -> To
 {
-    static_assert(is_sign_castable_v<T, U>, "U does not meet the requirements to be casted to a T");
+    static_assert(is_sign_castable_v<To, From>, "U does not meet the requirements to be casted to a T");
 
-    return static_cast<T>(u);
+    return static_cast<To>(u);
 }
 
-template<typename T, typename U>
-NODISCARD constexpr auto sign_cast(U&& u) noexcept(std::is_signed<T>::value && sizeof(T) > sizeof(U))
-    -> std::enable_if_t<CHECK_CASTS, T>
+template<typename To, typename From>
+NODISCARD constexpr auto sign_cast(From&& u) noexcept(std::is_signed<To>::value && sizeof(To) > sizeof(From))
+    -> std::enable_if_t<CHECK_CASTS, To>
 {
-    static_assert(is_sign_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_sign_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
-    return sign_cast_checked<T>(std::forward<U>(u));
+    return sign_cast_checked<To>(std::forward<From>(u));
 }
 
-template<typename T, typename U>
-NODISCARD constexpr auto sign_cast(U&& u) noexcept -> std::enable_if_t<!CHECK_CASTS, T>
+template<typename To, typename From>
+NODISCARD constexpr auto sign_cast(From&& u) noexcept -> std::enable_if_t<!CHECK_CASTS, To>
 {
-    static_assert(is_sign_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_sign_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
-    return sign_cast_unchecked<T>(std::forward<U>(u));
+    return sign_cast_unchecked<To>(std::forward<From>(u));
 }
 
-template<typename T, typename U>
+template<typename To, typename From>
 struct is_up_castable :
     std::integral_constant<bool,
-        (((std::is_pointer<T>::value && std::is_pointer<U>::value)
-             || (std::is_reference<T>::value && std::is_reference<U>::value))
-            && std::is_const<std::remove_pointer_t<std::remove_reference_t<T>>>::value
-                == std::is_const<std::remove_pointer_t<std::remove_reference_t<U>>>::value
-            && std::is_base_of<std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<T>>>,
-                std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<U>>>>::value
-            && !std::is_same<std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<T>>>,
-                std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<U>>>>::value)>
+        (((std::is_pointer<To>::value && std::is_pointer<From>::value)
+             || (std::is_reference<To>::value && std::is_reference<From>::value))
+            && std::is_const<std::remove_pointer_t<std::remove_reference_t<To>>>::value
+                == std::is_const<std::remove_pointer_t<std::remove_reference_t<From>>>::value
+            && std::is_base_of<std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<To>>>,
+                std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<From>>>>::value
+            && !std::is_same<std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<To>>>,
+                std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<From>>>>::value)>
 {
 };
 
-template<typename T, typename U>
-INLINE_CONSTEXPR bool is_up_castable_v = is_up_castable<T, U>::value;
+template<typename To, typename From>
+INLINE_CONSTEXPR bool is_up_castable_v = is_up_castable<To, From>::value;
 
-template<typename T, typename U>
-NODISCARD constexpr auto up_cast(U&& u) noexcept -> T
+template<typename To, typename From>
+NODISCARD constexpr auto up_cast(From&& u) noexcept -> To
 {
-    static_assert(is_up_castable_v<T, U>, "U does not meet the requirements to be casted to a T");
+    static_assert(is_up_castable_v<To, From>, "U does not meet the requirements to be casted to a T");
 
-    return static_cast<T>(std::forward<U>(u));
+    return static_cast<To>(std::forward<From>(u));
 }
 
-template<typename T, typename U>
+template<typename To, typename From>
 struct is_void_castable :
     std::integral_constant<bool,
-        ((std::is_pointer<T>::value || std::is_null_pointer<T>::value)
-            && (std::is_pointer<U>::value || std::is_null_pointer<U>::value)
-            && (std::is_void<std::remove_pointer_t<T>>::value || std::is_void<std::remove_pointer_t<U>>::value)
-            && std::is_const<std::remove_pointer_t<T>>::value == std::is_const<std::remove_pointer_t<U>>::value)>
+        ((std::is_pointer<To>::value || std::is_null_pointer<To>::value)
+            && (std::is_pointer<From>::value || std::is_null_pointer<From>::value)
+            && (std::is_void<std::remove_pointer_t<To>>::value || std::is_void<std::remove_pointer_t<From>>::value)
+            && std::is_const<std::remove_pointer_t<To>>::value == std::is_const<std::remove_pointer_t<From>>::value)>
 {
 };
 
-template<typename T, typename U>
-INLINE_CONSTEXPR bool is_void_castable_v = is_void_castable<T, U>::value;
+template<typename To, typename From>
+INLINE_CONSTEXPR bool is_void_castable_v = is_void_castable<To, From>::value;
 
 static_assert(is_void_castable_v<void*, int*>, "Must be able to cast T* to void*");
 static_assert(!is_void_castable_v<void*, int>, "Must not be able to cast T to void*");
@@ -754,13 +761,13 @@ static_assert(!is_void_castable_v<std::size_t, void*>, "Must not be able to cast
 static_assert(is_void_castable_v<void*, std::nullptr_t>, "Must be able to cast nullptr_t to void*");
 static_assert(is_void_castable_v<std::nullptr_t, void*>, "Must be able to cast void* to nullptr_t");
 
-template<typename T, typename U>
-NODISCARD constexpr auto void_cast(U&& u) noexcept -> T
+template<typename To, typename From>
+NODISCARD constexpr auto void_cast(From&& u) noexcept -> To
 {
-    static_assert(is_void_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
+    static_assert(is_void_castable_v<To, std::remove_cv_t<std::remove_reference_t<From>>>,
         "U does not meet the requirements to be casted to a T");
 
-    return static_cast<T>(std::forward<U>(u));
+    return static_cast<To>(std::forward<From>(u));
 }
 } // namespace casts
 // NOLINTEND(*-identifier-length)
