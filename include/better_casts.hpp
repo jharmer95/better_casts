@@ -1,6 +1,10 @@
 #ifndef BETTER_CASTS_HPP
 #define BETTER_CASTS_HPP
 
+#ifdef USE_MAGIC_ENUM
+#  include <magic_enum/magic_enum.hpp>
+#endif
+
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -111,6 +115,21 @@ public:
 
 namespace detail
 {
+    template<typename T, bool = false>
+    struct underlying_type
+    {
+        using type = std::remove_cv_t<std::remove_reference_t<T>>;
+    };
+
+    template<typename T>
+    struct underlying_type<T, true>
+    {
+        using type = std::underlying_type_t<std::remove_cv_t<std::remove_reference_t<T>>>;
+    };
+
+    template<typename T>
+    using underlying_type_t = typename underlying_type<T, std::is_enum<T>::value>::type;
+
     template<typename T, typename U>
     INLINE_CONSTEXPR bool is_smaller_size = sizeof(T) < sizeof(U);
 
@@ -156,6 +175,17 @@ namespace detail
 #else
         using float_op_default = float_op_truncate;
 #endif
+
+        template<typename T>
+        struct float_const
+        {
+            using type = std::remove_cv_t<std::remove_reference_t<T>>;
+            static_assert(std::is_floating_point<type>::value, "T must be floating point");
+
+            static constexpr auto ZERO = static_cast<type>(0);
+            static constexpr auto ONE = static_cast<type>(1);
+            static constexpr auto HALF = static_cast<type>(0.5);
+        };
 
         template<typename T>
         NODISCARD constexpr auto is_nan(T val) noexcept -> bool
@@ -207,6 +237,12 @@ namespace detail
         }
 
         template<typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value>>
+        constexpr auto trunc(T t) noexcept -> T
+        {
+            return static_cast<T>(static_cast<std::intmax_t>(t));
+        }
+
+        template<typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value>>
         constexpr auto abs(T t) noexcept -> T
         {
             return t < 0 ? -t : t;
@@ -216,40 +252,53 @@ namespace detail
             typename = std::enable_if_t<std::is_arithmetic<T>::value && std::is_floating_point<U>::value>>
         constexpr auto round(U u) noexcept -> T
         {
-            if (u >= 0.0)
+            if (u >= float_const<U>::ZERO)
             {
-                return abs(static_cast<std::intmax_t>(u) - u) >= abs(static_cast<std::intmax_t>(u) - u + 1)
-                    ? static_cast<T>(u) + 1
+                return abs(trunc(u) - u) >= abs(trunc(u) - u + float_const<U>::ONE)
+                    ? static_cast<T>(u) + static_cast<T>(1)
                     : static_cast<T>(u);
             }
 
-            return abs(static_cast<std::intmax_t>(u) - u) >= abs(static_cast<std::intmax_t>(u) - u - 1)
-                ? static_cast<T>(u) - 1
-                : static_cast<T>(u);
+            return abs(trunc(u) - u) >= abs(trunc(u) - u - float_const<U>::ONE) ? static_cast<T>(u) - static_cast<T>(1)
+                                                                                : static_cast<T>(u);
         }
 
         template<typename T, typename U,
             typename = std::enable_if_t<std::is_arithmetic<T>::value && std::is_floating_point<U>::value>>
         constexpr auto floor(U u) noexcept -> T
         {
-            if (static_cast<U>(static_cast<std::intmax_t>(u)) == u)
+#ifdef __clang__
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wfloat-equal"
+#endif
+            if (trunc(u) == u)
             {
                 return static_cast<T>(u);
             }
+#ifdef __clang__
+#  pragma clang diagnostic pop
+#endif
 
-            return u < 0.0 ? static_cast<T>(u) - 1 : static_cast<T>(u);
+            return u < float_const<U>::ZERO ? static_cast<T>(u) - static_cast<T>(1) : static_cast<T>(u);
         }
 
         template<typename T, typename U,
             typename = std::enable_if_t<std::is_arithmetic<T>::value && std::is_floating_point<U>::value>>
         constexpr auto ceiling(U u) noexcept -> T
         {
-            if (static_cast<U>(static_cast<std::intmax_t>(u)) == u)
+#ifdef __clang__
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wfloat-equal"
+#endif
+            if (trunc(u) == u)
             {
                 return static_cast<T>(u);
             }
+#ifdef __clang__
+#  pragma clang diagnostic pop
+#endif
 
-            return u < 0.0 ? static_cast<T>(u) : static_cast<T>(u) + 1;
+            return u < float_const<U>::ZERO ? static_cast<T>(u) : static_cast<T>(u) + static_cast<T>(1);
         }
     } //namespace math
 } // namespace detail
@@ -257,11 +306,10 @@ namespace detail
 template<typename T, typename U>
 struct is_enum_castable :
     std::integral_constant<bool,
-        ((std::is_enum<T>::value || std::is_enum<U>::value)
+        ((std::is_enum<T>::value != std::is_enum<U>::value)
             && (detail::is_same_size<T, U> || detail::is_larger_size<T, U>)
-            && detail::is_same_sign<T, std::underlying_type_t<U>>)>
+            && detail::is_same_sign<detail::underlying_type_t<T>, detail::underlying_type_t<U>>)>
 {
-    // TODO: Can check if valid enumerator? (magic_enum)
 };
 
 template<typename T, typename U>
@@ -275,10 +323,34 @@ NODISCARD constexpr auto enum_cast_unchecked(U&& u) noexcept -> T
 }
 
 template<typename T, typename U>
-NODISCARD constexpr auto enum_cast_checked(U u) noexcept -> T
+NODISCARD constexpr auto enum_cast_checked(U u) -> T
 {
     static_assert(is_enum_castable_v<T, U>, "U does not meet the requirements to be casted to a T");
+
+#ifdef USE_MAGIC_ENUM
+    if constexpr (std::is_enum_v<T>)
+    {
+        auto casted = magic_enum::enum_cast<T>(u);
+
+        if (!casted.has_value())
+        {
+            throw enum_cast_error("enum_cast failed: value not contained within enum");
+        }
+
+        return *casted;
+    }
+    else
+    {
+        if (!magic_enum::enum_contains<U>(u))
+        {
+            throw enum_cast_error("enum_cast failed: value not contained within enum");
+        }
+
+        return static_cast<T>(u);
+    }
+#else
     return static_cast<T>(u);
+#endif
 }
 
 template<typename T, typename U>
@@ -373,12 +445,13 @@ NODISCARD constexpr auto float_cast_checked(U&& u, const detail::math::float_op_
 
     detail::math::check_inf_nan(u);
 
-    if (u > 0.0 && u > static_cast<U>((std::numeric_limits<T>::max)()))
+    if (u > detail::math::float_const<U>::ZERO && u > static_cast<U>((std::numeric_limits<T>::max)()))
     {
         throw float_cast_error("float_cast (ceiling) failed: input exceeded max value for output type");
     }
 
-    if (u < 0.0 && u + 1.0 <= static_cast<U>((std::numeric_limits<T>::min)()))
+    if (u < detail::math::float_const<U>::ZERO
+        && u + detail::math::float_const<U>::ONE <= static_cast<U>((std::numeric_limits<T>::min)()))
     {
         throw float_cast_error("float_cast (ceiling) failed: input exceeded min value for output type");
     }
@@ -394,12 +467,13 @@ NODISCARD constexpr auto float_cast_checked(U&& u, const detail::math::float_op_
 
     detail::math::check_inf_nan(u);
 
-    if (u > 0.0 && u - 1.0 >= static_cast<U>((std::numeric_limits<T>::max)()))
+    if (u > detail::math::float_const<U>::ZERO
+        && u - detail::math::float_const<U>::ONE >= static_cast<U>((std::numeric_limits<T>::max)()))
     {
         throw float_cast_error("float_cast (floor) failed: input exceeded max value for output type");
     }
 
-    if (u < 0.0 && u < static_cast<U>((std::numeric_limits<T>::min)()))
+    if (u < detail::math::float_const<U>::ZERO && u < static_cast<U>((std::numeric_limits<T>::min)()))
     {
         throw float_cast_error("float_cast (floor) failed: input exceeded min value for output type");
     }
@@ -415,12 +489,14 @@ NODISCARD constexpr auto float_cast_checked(U&& u, const detail::math::float_op_
 
     detail::math::check_inf_nan(u);
 
-    if (u > 0.0 && u - 0.5 >= static_cast<U>((std::numeric_limits<T>::max)()))
+    if (u > detail::math::float_const<U>::ZERO
+        && u - detail::math::float_const<U>::HALF >= static_cast<U>((std::numeric_limits<T>::max)()))
     {
         throw float_cast_error("float_cast (round) failed: input exceeded max value for output type");
     }
 
-    if (u < 0.0 && u + 0.5 <= static_cast<U>((std::numeric_limits<T>::min)()))
+    if (u < detail::math::float_const<U>::ZERO
+        && u + detail::math::float_const<U>::HALF <= static_cast<U>((std::numeric_limits<T>::min)()))
     {
         throw float_cast_error("float_cast (round) failed: input exceeded min value for output type");
     }
@@ -431,17 +507,18 @@ NODISCARD constexpr auto float_cast_checked(U&& u, const detail::math::float_op_
 template<typename T, typename U>
 NODISCARD constexpr auto float_cast_checked(U&& u, const detail::math::float_op_truncate tag) -> T
 {
-    static_assert(is_float_castable_v<T, std::remove_cv_t<std::remove_reference_t<U>>>,
-        "U does not meet the requirements to be casted to a T");
+    using u_no_cvref_t = std::remove_cv_t<std::remove_reference_t<U>>;
+
+    static_assert(is_float_castable_v<T, u_no_cvref_t>, "U does not meet the requirements to be casted to a T");
 
     detail::math::check_inf_nan(u);
 
-    if (u - 1.0 >= static_cast<U>((std::numeric_limits<T>::max)()))
+    if (u - detail::math::float_const<U>::ONE >= static_cast<u_no_cvref_t>((std::numeric_limits<T>::max)()))
     {
         throw float_cast_error("float_cast (truncate) failed: input exceeded max value for output type");
     }
 
-    if (u + 1.0 <= static_cast<U>((std::numeric_limits<T>::min)()))
+    if (u + detail::math::float_const<U>::ONE <= static_cast<u_no_cvref_t>((std::numeric_limits<T>::min)()))
     {
         throw float_cast_error("float_cast (truncate) failed: input exceeded min value for output type");
     }

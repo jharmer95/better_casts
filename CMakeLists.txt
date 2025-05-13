@@ -14,56 +14,61 @@ set(FLOAT_OPS
 )
 
 option(BUILD_TESTS "Builds the test tree" ON)
+option(USE_MAGIC_ENUM "Use magic_enum to enhance enum casts" OFF)
 option(WERROR "Treat all warnings as errors" OFF)
 set(DEFAULT_FLOAT_CAST_OP "Truncate" CACHE STRING "Default float cast operation")
+
+if (USE_MAGIC_ENUM)
+    set(CMAKE_CXX_STANDARD 17)
+endif ()
 
 if (NOT DEFAULT_FLOAT_CAST_OP IN_LIST FLOAT_OPS)
     message(FATAL_ERROR "Invalid default float cast operation: ${DEFAULT_FLOAT_CAST_OP}. Must be one of: ${FLOAT_OPS}.")
 endif ()
 
-if(WIN32)
+if (WIN32)
     set(TARGET_WINDOWS TRUE)
-    if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         set(CXX_MSVC TRUE)
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         set(CXX_MINGW TRUE)
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "GNU")
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "GNU")
             set(CXX_CLANG TRUE)
-        else()
+        else ()
             set(CXX_CLANG_CL TRUE)
             add_compile_options(/EHsc)
-        endif()
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+        endif ()
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
         set(CXX_INTEL TRUE)
-    else()
+    else ()
         message(FATAL_ERROR "Invalid compiler: ${CMAKE_CXX_COMPILER_ID}, supported compilers for Windows are: [MSVC, GNU, Clang, Intel]")
-    endif()
-elseif(UNIX AND NOT APPLE)
+    endif ()
+elseif (UNIX AND NOT APPLE)
     set(TARGET_LINUX TRUE)
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         set(CXX_GCC TRUE)
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         set(CXX_CLANG TRUE)
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
         set(CXX_INTEL TRUE)
-    else()
+    else ()
         message(FATAL_ERROR "Invalid compiler: ${CMAKE_CXX_COMPILER_ID}, supported compilers for UNIX are: [GNU, Clang, Intel]")
-    endif()
-elseif(APPLE)
+    endif ()
+elseif (APPLE)
     set(TARGET_APPLE TRUE)
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         set(CXX_GCC TRUE)
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         set(CXX_CLANG TRUE)
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
         set(CXX_INTEL TRUE)
-    else()
+    else ()
         message(FATAL_ERROR "Invalid compiler: ${CMAKE_CXX_COMPILER_ID}, supported compilers for macOS are: [GNU, Clang, Intel]")
-    endif()
-endif()
+    endif ()
+endif ()
 
-if(CXX_MSVC)
+if (CXX_MSVC)
     set(FULL_WARNING
             /W4
             /experimental:external
@@ -102,11 +107,11 @@ if(CXX_MSVC)
             /Zc:__cplusplus
             /bigobj
             -D_WIN32_WINNT=0x0A00)
-    if(WERROR)
+    if (WERROR)
         list(APPEND FULL_WARNING /WX)
         list(APPEND MIN_WARNING /WX)
-    endif()
-elseif(CXX_GCC OR CXX_MINGW OR CXX_INTEL)
+    endif ()
+elseif (CXX_GCC OR CXX_MINGW OR CXX_INTEL)
     set(FULL_WARNING
             -Wall
             -Wextra
@@ -130,16 +135,16 @@ elseif(CXX_GCC OR CXX_MINGW OR CXX_INTEL)
             -Wmisleading-indentation
             -Wmissing-field-initializers)
     set(MIN_WARNING -Wall)
-    if(CXX_MINGW)
+    if (CXX_MINGW)
         list(APPEND FULL_WARNING -Wa,-mbig-obj)
         list(APPEND MIN_WARNING -Wa,-mbig-obj)
         set(USE_PCH OFF)
-    endif()
-    if(WERROR)
+    endif ()
+    if (WERROR)
         list(APPEND FULL_WARNING -Werror)
         list(APPEND MIN_WARNING -Werror)
-    endif()
-elseif(CXX_CLANG OR CXX_CLANG_CL)
+    endif ()
+elseif (CXX_CLANG OR CXX_CLANG_CL)
     set(FULL_WARNING
             -Weverything
             -Wno-c++98-compat
@@ -161,23 +166,39 @@ elseif(CXX_CLANG OR CXX_CLANG_CL)
             -Wno-c++20-attribute-extensions
             -Wno-assume)
     set(MIN_WARNING -Wall)
-    if(CXX_CLANG_CL)
+    if (CXX_CLANG_CL)
         list(APPEND FULL_WARNING
                 /bigobj
                 -D_WIN32_WINNT=0x0A00)
         list(APPEND MIN_WARNING
                 /bigobj
                 -D_WIN32_WINNT=0x0A00)
-    endif()
-    if(WERROR)
+    endif ()
+    if (WERROR)
         list(APPEND FULL_WARNING -Werror)
         list(APPEND MIN_WARNING -Werror)
-    endif()
-endif()
+    endif ()
+endif ()
 
 add_library(better_casts INTERFACE include/better_casts.hpp)
 target_compile_options(better_casts INTERFACE ${FULL_WARNING})
 target_include_directories(better_casts INTERFACE include)
+
+if (USE_MAGIC_ENUM)
+    include(FetchContent)
+    FetchContent_Declare(
+            magic_enum
+            GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
+            GIT_TAG e046b69a3736d314fad813e159b1c192eaef92cd # v0.9.7
+            FIND_PACKAGE_ARGS
+    )
+    FetchContent_MakeAvailable(magic_enum)
+
+    find_package(magic_enum CONFIG REQUIRED)
+
+    target_compile_definitions(better_casts INTERFACE USE_MAGIC_ENUM)
+    target_link_libraries(better_casts INTERFACE magic_enum::magic_enum)
+endif ()
 
 if (DEFAULT_FLOAT_CAST_OP STREQUAL "Ceiling")
     target_compile_definitions(better_casts INTERFACE DEFAULT_FLOAT_CAST_OP=1)

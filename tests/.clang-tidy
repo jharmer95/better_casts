@@ -1,0 +1,21 @@
+---
+Checks: bugprone-*,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  google-*,
+  hicpp-*,
+  misc-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  security-*,
+  -*-uppercase-literal-suffix,
+  -*-use-anonymous-namespace,
+  -*-use-trailing-return-type,
+  -*-function-cognitive-complexity,
+  -*-avoid-do-while,
+WarningsAsErrors: ''
+HeaderFilterRegex: ''
+User: ''
+...

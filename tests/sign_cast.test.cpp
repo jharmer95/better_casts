@@ -2,6 +2,9 @@
 
 #include <doctest/doctest.h>
 
+#include <cstdint>
+#include <tuple>
+
 namespace casts
 {
 namespace tests
@@ -20,21 +23,21 @@ namespace tests
         TEST_CASE("Negative number cannot be cast to unsigned")
         {
             static constexpr int test_val = -1;
-            REQUIRE_THROWS_AS(auto _ = sign_cast_checked<unsigned>(test_val), sign_cast_error);
+            REQUIRE_THROWS_AS(std::ignore = sign_cast_checked<unsigned>(test_val), sign_cast_error);
         }
 
         TEST_CASE("Number greater than limit cannot be cast")
         {
-            static constexpr uint8_t test_val = 128;
-            REQUIRE_THROWS_AS(auto _ = sign_cast_checked<int8_t>(test_val), sign_cast_error);
+            static constexpr std::uint8_t test_val = 128;
+            REQUIRE_THROWS_AS(std::ignore = sign_cast_checked<std::int8_t>(test_val), sign_cast_error);
         }
 
         TEST_CASE("Unsigned number can be cast to larger signed type")
         {
-            static constexpr uint8_t test_val = 128;
-            static constexpr int16_t expected = 128;
+            static constexpr std::uint8_t test_val = 128;
+            static constexpr std::int16_t expected = 128;
 
-            const auto result = sign_cast_checked<int16_t>(test_val);
+            const auto result = sign_cast_checked<std::int16_t>(test_val);
             CHECK_EQ(expected, result);
         }
     }
