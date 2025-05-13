@@ -214,4 +214,9 @@ else ()
     target_compile_definitions(better_casts INTERFACE DEFAULT_FLOAT_CAST_OP=4)
 endif ()
 
-add_subdirectory(tests)
+if (BUILD_TESTS)
+    include(CTest)
+    enable_testing()
+
+    add_subdirectory(tests)
+endif ()

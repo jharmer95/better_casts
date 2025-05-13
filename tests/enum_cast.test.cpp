@@ -1,6 +1,13 @@
 #include "better_casts.hpp"
 
+#ifdef __clang__
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
+#endif
 #include <doctest/doctest.h>
+#ifdef __clang__
+#  pragma clang diagnostic pop
+#endif
 
 namespace casts
 {
@@ -41,7 +48,7 @@ namespace tests
         TEST_CASE("(magic_enum) Invalid enumerator cannot be cast to its underlying type")
         {
             static constexpr auto test_val1 = static_cast<MyEnum>(11); // NOLINT(*-optin.core.EnumCastOutOfRange)
-            static constexpr auto test_val2 = static_cast<MyEnum>(4); // NOLINT(*-optin.core.EnumCastOutOfRange)
+            static constexpr auto test_val2 = static_cast<MyEnum>(4);  // NOLINT(*-optin.core.EnumCastOutOfRange)
 
             REQUIRE_THROWS_AS(std::ignore = enum_cast_checked<int>(test_val1), enum_cast_error);
             REQUIRE_THROWS_AS(std::ignore = enum_cast_checked<int>(test_val2), enum_cast_error);

@@ -1,5 +1,3 @@
-enable_testing()
-
 include(FetchContent)
 FetchContent_Declare(
     doctest
@@ -11,18 +9,15 @@ FetchContent_MakeAvailable(doctest)
 
 find_package(doctest CONFIG REQUIRED)
 
-add_executable(test_enum_cast enum_cast.test.cpp)
-target_link_libraries(test_enum_cast PRIVATE better_casts doctest::doctest_with_main)
-add_test(NAME "enum_cast" COMMAND test_enum_cast)
+list(APPEND CMAKE_MODULE_PATH "${doctest_SOURCE_DIR}/scripts/cmake")
 
-add_executable(test_float_cast float_cast.test.cpp)
-target_link_libraries(test_float_cast PRIVATE better_casts doctest::doctest_with_main)
-add_test(NAME "float_cast" COMMAND test_float_cast)
+include(doctest)
 
-add_executable(test_narrow_cast narrow_cast.test.cpp)
-target_link_libraries(test_narrow_cast PRIVATE better_casts doctest::doctest_with_main)
-add_test(NAME "narrow_cast" COMMAND test_narrow_cast)
-
-add_executable(test_sign_cast sign_cast.test.cpp)
-target_link_libraries(test_sign_cast PRIVATE better_casts doctest::doctest_with_main)
-add_test(NAME "sign_cast" COMMAND test_sign_cast)
+add_executable(unit_tests
+        enum_cast.test.cpp
+        float_cast.test.cpp
+        narrow_cast.test.cpp
+        sign_cast.test.cpp
+)
+target_link_libraries(unit_tests PRIVATE better_casts doctest::doctest_with_main)
+doctest_discover_tests(unit_tests)

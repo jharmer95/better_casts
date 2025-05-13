@@ -1,6 +1,13 @@
 #include "better_casts.hpp"
 
+#ifdef __clang__
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
+#endif
 #include <doctest/doctest.h>
+#ifdef __clang__
+#  pragma clang diagnostic pop
+#endif
 
 #include <cstdint>
 #include <tuple>
