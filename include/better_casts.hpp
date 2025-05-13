@@ -8,7 +8,14 @@
 #define BETTER_CASTS_HPP
 
 #ifdef USE_MAGIC_ENUM
+#  ifdef __clang__
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
+#  endif
 #  include <magic_enum/magic_enum.hpp>
+#  ifdef __clang__
+#    pragma clang diagnostic pop
+#  endif
 #endif
 
 #include <cmath>
