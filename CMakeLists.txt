@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.26)
 project(better_casts
-        VERSION 0.1.0
+        VERSION 0.1.1
         LANGUAGES CXX
         DESCRIPTION "A C++ library for better type casting"
 )
