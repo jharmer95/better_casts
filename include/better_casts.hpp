@@ -728,7 +728,8 @@ NODISCARD constexpr auto up_cast(U&& u) noexcept -> T
 template<typename T, typename U>
 struct is_void_castable :
     std::integral_constant<bool,
-        (std::is_pointer<T>::value && std::is_pointer<U>::value
+        ((std::is_pointer<T>::value || std::is_null_pointer<T>::value)
+            && (std::is_pointer<U>::value || std::is_null_pointer<U>::value)
             && (std::is_void<std::remove_pointer_t<T>>::value || std::is_void<std::remove_pointer_t<U>>::value)
             && std::is_const<std::remove_pointer_t<T>>::value == std::is_const<std::remove_pointer_t<U>>::value)>
 {
@@ -748,6 +749,10 @@ static_assert(!is_void_castable_v<int&, void*>, "Must not be able to cast void* 
 static_assert(!is_void_castable_v<const int*, void*>, "Must not be able to cast to void* to const T*");
 static_assert(is_void_castable_v<const int*, const void*>, "Must be able to cast const void* to const T*");
 static_assert(!is_void_castable_v<int*, float*>, "Must not be able to cast U* to T*");
+static_assert(!is_void_castable_v<void*, std::size_t>, "Must not be able to cast size_t to void*");
+static_assert(!is_void_castable_v<std::size_t, void*>, "Must not be able to cast void* to size_t");
+static_assert(is_void_castable_v<void*, std::nullptr_t>, "Must be able to cast nullptr_t to void*");
+static_assert(is_void_castable_v<std::nullptr_t, void*>, "Must be able to cast void* to nullptr_t");
 
 template<typename T, typename U>
 NODISCARD constexpr auto void_cast(U&& u) noexcept -> T
