@@ -356,7 +356,7 @@ NODISCARD constexpr auto enum_cast_checked(From from_val) -> To
 #ifdef USE_MAGIC_ENUM
     if constexpr (std::is_enum_v<To>)
     {
-        auto casted = magic_enum::enum_cast<To>(u);
+        auto casted = magic_enum::enum_cast<To>(from_val);
 
         if (!casted.has_value())
         {
@@ -367,12 +367,12 @@ NODISCARD constexpr auto enum_cast_checked(From from_val) -> To
     }
     else
     {
-        if (!magic_enum::enum_contains<From>(u))
+        if (!magic_enum::enum_contains<From>(from_val))
         {
             throw enum_cast_error("enum_cast failed: value not contained within enum");
         }
 
-        return static_cast<To>(u);
+        return static_cast<To>(from_val);
     }
 #else
     return static_cast<To>(from_val);
