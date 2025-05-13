@@ -38,6 +38,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - uses: ilammy/msvc-dev-cmd@v1
 
     - name: Set reusable strings
       id: strings
@@ -62,4 +63,4 @@ jobs:
 
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      run: ctest
+      run: ctest --output-on-failure
