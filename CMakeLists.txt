@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.26)
-project(better_casts VERSION 0.1.0 LANGUAGES CXX)
+project(better_casts
+        VERSION 0.1.0
+        LANGUAGES CXX
+        DESCRIPTION "A C++ library for better type casting"
+)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 14)
