@@ -51,11 +51,13 @@ namespace tests
 
         TEST_CASE("Types of same size can be casted")
         {
-            static_assert(!std::is_same<std::int8_t, char>::value, "int8_t must be distinct from char");
-            static_assert(sizeof(std::int8_t) == sizeof(char), "char must be 8-bit");
+            using char_cast_t = std::conditional_t<std::is_signed<char>::value, std::int8_t, std::uint8_t>;
 
-            static constexpr std::int8_t test_val = 42;
-            static constexpr char expected = 42;
+            static_assert(!std::is_same<char_cast_t, char>::value, "char_cast_t must be distinct from char");
+            static_assert(sizeof(char_cast_t) == sizeof(char), "char must be 8-bit");
+
+            static constexpr char_cast_t test_val = 65;
+            static constexpr char expected = 'A';
 
             const auto result = narrow_cast_checked<char>(test_val);
             CHECK_EQ(expected, result);
